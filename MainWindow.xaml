@@ -250,6 +250,6 @@
                 </MenuItem>
             </Menu>
         </Grid>
-        <TextBox x:Name="TextInput" HorizontalAlignment="Center" Margin="0,20,0,0" TextWrapping="Wrap" Text="" Width="784" Background="#FF0D0D0D" Foreground="White" SelectionBrush="#FF5D5D5D" BorderBrush="#FF161616" TextChanged="TextInput_TextChanged" BorderThickness="0" AcceptsReturn="True" AcceptsTab="True" VerticalScrollBarVisibility="Auto" FontFamily="Cascadia Code" FontSize="16"/>
+        <TextBox x:Name="TextInput" Margin="0,20,0,0" TextWrapping="Wrap" Text="" Width="Auto" Background="#FF0D0D0D" Foreground="White" SelectionBrush="#FF5D5D5D" BorderBrush="#FF161616" TextChanged="TextInput_TextChanged" BorderThickness="0" AcceptsReturn="True" AcceptsTab="True" VerticalScrollBarVisibility="Auto" FontFamily="Cascadia Code" FontSize="16"/>
     </Grid>
 </Window>

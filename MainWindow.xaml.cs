@@ -12,6 +12,8 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Diagnostics;
 using Microsoft.Win32;
+using System.Buffers.Text;
+using System.Text.Unicode;
 
 namespace EncryptedNotes
 {
@@ -44,7 +46,7 @@ namespace EncryptedNotes
 
             if (!File.Exists(PublicKeyPath) || !File.Exists(PrivateKeyPath))
             {
-                var rsa = new RSACryptoServiceProvider();
+                var rsa = new RSACryptoServiceProvider(2048);
                 PublicKey = rsa.ToXmlString(false);
                 PrivateKey = rsa.ToXmlString(true);
 
@@ -81,11 +83,27 @@ namespace EncryptedNotes
         {
             try
             {
-                var rsa = new RSACryptoServiceProvider();
+                var rsa = new RSACryptoServiceProvider(2048);
                 rsa.FromXmlString(publicKey);
-                var data = Encoding.UTF8.GetBytes(text);
-                var encryptedData = rsa.Encrypt(data, false);
-                return Convert.ToBase64String(encryptedData);
+                int maxDataSize = (rsa.KeySize / 8) - 11;
+
+                byte[] textBytes = Encoding.UTF8.GetBytes(text);
+                int dataLength = textBytes.Length;
+                int offset = 0;
+                List<string> encryptedChunks = new List<string>();
+
+                while (offset < dataLength)
+                {
+                    int chunkSize = Math.Min(maxDataSize, dataLength - offset);
+                    byte[] chunk = new byte[chunkSize];
+                    Array.Copy(textBytes, offset, chunk, 0, chunkSize);
+                    byte[] encryptedData = rsa.Encrypt(chunk, false);
+                    string encryptedChunk = Convert.ToBase64String(encryptedData);
+                    encryptedChunks.Add(encryptedChunk);
+                    offset += chunkSize;
+                }
+
+                return string.Join(";", encryptedChunks);
             }
             catch (Exception e)
             {
@@ -94,15 +112,31 @@ namespace EncryptedNotes
             }
         }
 
+
         static string Decrypt(string encryptedText, string privateKey)
         {
             try
             {
-                var rsa = new RSACryptoServiceProvider();
+                var rsa = new RSACryptoServiceProvider(2048);
                 rsa.FromXmlString(privateKey);
-                var encryptedData = Convert.FromBase64String(encryptedText);
-                var data = rsa.Decrypt(encryptedData, false);
-                return Encoding.UTF8.GetString(data);
+
+                string decryptedText = string.Empty;
+                string[] encryptedChunks = encryptedText.Split(';');
+                foreach (string encryptedChunk in encryptedChunks)
+                {
+                    if (string.IsNullOrEmpty(encryptedChunk))
+                    {
+                        continue;
+                    }
+
+                    byte[] encryptedData = Convert.FromBase64String(encryptedChunk);
+                    byte[] data = rsa.Decrypt(encryptedData, false);
+                    string chunk = Encoding.UTF8.GetString(data);
+
+                    decryptedText += chunk;
+                }
+                return decryptedText;
+
             }
             catch (Exception e)
             {
@@ -110,8 +144,8 @@ namespace EncryptedNotes
                 Debug.WriteLine(e.Message);
                 return null;
             }
-
         }
+
 
         private void OpenETF_Click(object sender, RoutedEventArgs e)
         {
@@ -134,6 +168,7 @@ namespace EncryptedNotes
             saveFileDialog.Filter = "Encrypted Text Files (*.EncryptedTXT)|*.EncryptedTXT";
             if (saveFileDialog.ShowDialog() == true)
             {
+                string text = Convert.ToBase64String(Encoding.UTF8.GetBytes(TextInput.Text));
                 string encryptedText = Encrypt(TextInput.Text, PublicKey);
                 File.WriteAllText(saveFileDialog.FileName, encryptedText);
                 Window.Title = $"Encrypted Notes - {System.IO.Path.GetFileName(saveFileDialog.FileName)}";
