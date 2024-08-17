@@ -24,19 +24,21 @@ namespace EncryptedNotes
         public string PrivateKey = string.Empty;
         public string PublicKeyPath = string.Empty;
         public string PrivateKeyPath = string.Empty;
+        public string OpenFilePath = string.Empty;
         public MainWindow()
         {
             InitializeEncryption();
             InitializeComponent();
+            
         }
 
         private async void InitializeEncryption()
         {
             string appdatalocalpath = Environment.GetEnvironmentVariable("LOCALAPPDATA");
-            if(!Directory.Exists(appdatalocalpath + "\\EncryptedNotes"))
+            if (!Directory.Exists(appdatalocalpath + "\\EncryptedNotes"))
             {
                 Directory.CreateDirectory(appdatalocalpath + "\\EncryptedNotes");
-            }            
+            }
             PublicKeyPath = $"{appdatalocalpath}\\EncryptedNotes\\publicKey.xml";
             PrivateKeyPath = $"{appdatalocalpath}\\EncryptedNotes\\privateKey.xml";
 
@@ -55,11 +57,11 @@ namespace EncryptedNotes
 
             if (PublicKey == null || PrivateKey == null)
             {
-                MessageBox.Show("Error", "Failed to load or create keys", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Failed to load or create keys", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
         }
-        
+
 
         private async void TextInput_TextChanged(object sender, TextChangedEventArgs e)
         {
@@ -85,7 +87,7 @@ namespace EncryptedNotes
                 var encryptedData = rsa.Encrypt(data, false);
                 return Convert.ToBase64String(encryptedData);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Debug.WriteLine(e.Message);
                 return null;
@@ -102,9 +104,9 @@ namespace EncryptedNotes
                 var data = rsa.Decrypt(encryptedData, false);
                 return Encoding.UTF8.GetString(data);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                MessageBox.Show("Error", "Failed to decrypt text, decryption most likely failed due to incorrect keys.", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Failed to decrypt text, decryption most likely failed due to incorrect keys.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 Debug.WriteLine(e.Message);
                 return null;
             }
@@ -115,11 +117,14 @@ namespace EncryptedNotes
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "Encrypted Text Files (*.EncryptedTXT)|*.EncryptedTXT";
-            if(openFileDialog.ShowDialog() == true)
+            if (openFileDialog.ShowDialog() == true)
             {
+
                 string encryptedText = File.ReadAllText(openFileDialog.FileName);
                 string decryptedText = Decrypt(encryptedText, PrivateKey);
                 TextInput.Text = decryptedText;
+                Window.Title = $"Encrypted Notes - {System.IO.Path.GetFileName(openFileDialog.FileName)}";
+                OpenFilePath = System.IO.Path.GetFullPath(openFileDialog.FileName);
             }
         }
 
@@ -127,15 +132,23 @@ namespace EncryptedNotes
         {
             SaveFileDialog saveFileDialog = new SaveFileDialog();
             saveFileDialog.Filter = "Encrypted Text Files (*.EncryptedTXT)|*.EncryptedTXT";
-            if(saveFileDialog.ShowDialog() == true)
+            if (saveFileDialog.ShowDialog() == true)
             {
                 string encryptedText = Encrypt(TextInput.Text, PublicKey);
                 File.WriteAllText(saveFileDialog.FileName, encryptedText);
+                Window.Title = $"Encrypted Notes - {System.IO.Path.GetFileName(saveFileDialog.FileName)}";
+                OpenFilePath = System.IO.Path.GetFullPath(saveFileDialog.FileName);
             }
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void RegenKeys_Click(object sender, RoutedEventArgs e)
         {
+            var result = MessageBox.Show("Regenerating keys will delete the current keys and generate new ones. In return ANY text you've encrypted will be lost. Are you sure you want to continue?", "Warning", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result == MessageBoxResult.No)
+            {
+                return;
+            }
+            
             var rsa = new RSACryptoServiceProvider();
             PublicKey = rsa.ToXmlString(false);
             PrivateKey = rsa.ToXmlString(true);
@@ -143,5 +156,48 @@ namespace EncryptedNotes
             SaveKey(PublicKeyPath, PublicKey);
             SaveKey(PrivateKeyPath, PrivateKey);
         }
+        public static RoutedCommand MyCommand = new RoutedCommand();
+        private void NewCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            TextInput.Clear();
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "Encrypted Text Files (*.EncryptedTXT)|*.EncryptedTXT";
+            if(saveFileDialog.ShowDialog() == true)
+            {
+                File.Create(saveFileDialog.FileName);
+                Window.Title = $"Encrypted Notes - {System.IO.Path.GetFileName(saveFileDialog.FileName)}";
+                OpenFilePath = System.IO.Path.GetFullPath(saveFileDialog.FileName);
+            }
+        }
+
+        private void OpenCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            OpenETF_Click(sender, e);
+        }
+
+        private void SaveCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(OpenFilePath))
+            {
+                SaveAsCommand_Executed(sender, e);
+            }
+            else
+            {
+                string encryptedText = Encrypt(TextInput.Text, PublicKey);
+                File.WriteAllText(OpenFilePath, encryptedText);
+                Window.Title = $"Encrypted Notes - {System.IO.Path.GetFileName(OpenFilePath)}";
+            }
+        }
+
+        private void SaveAsCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            SaveETF_Click(sender, e);
+        }
+
+        private void CloseCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            this.Close();
+        }
+
     }
 }
