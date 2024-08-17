@@ -1,0 +1,17 @@
+﻿<Window x:Class="EncryptedNotes.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:EncryptedNotes"
+        mc:Ignorable="d"
+        Title="Encrypted Notes" Height="450" Width="800" Background="Black">
+    <Grid Background="#FF0D0D0D">
+        <Grid x:Name="NavBar" Background="#FF1A1A1A" VerticalAlignment="Top" Height="40">
+            <Button x:Name="OpenETF" Content="Open Encrypted Text File" HorizontalAlignment="Left" VerticalAlignment="Top" Click="OpenETF_Click"/>
+            <Button Content="Save File" HorizontalAlignment="Left" Margin="0,20,0,0" VerticalAlignment="Top" Width="135"/>
+        </Grid>
+        <TextBox x:Name="TextInput" HorizontalAlignment="Left" Margin="417,40,0,0" TextWrapping="Wrap" Text="" Width="373" Background="#FF161616" Foreground="White" SelectionBrush="#FF6A737B" BorderBrush="#FF161616" TextChanged="TextInput_TextChanged"/>
+
+    </Grid>
+</Window>
