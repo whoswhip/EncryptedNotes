@@ -22,48 +22,48 @@ namespace EncryptedNotes
     {
         public string PublicKey = string.Empty;
         public string PrivateKey = string.Empty;
+        public string PublicKeyPath = string.Empty;
+        public string PrivateKeyPath = string.Empty;
         public MainWindow()
         {
-            string publicKeyPath = "publicKey.xml";
-            string privateKeyPath = "privateKey.xml";
+            InitializeEncryption();
+            InitializeComponent();
+        }
 
-            if (!File.Exists(publicKeyPath) || !File.Exists(privateKeyPath))
+        private async void InitializeEncryption()
+        {
+            string appdatalocalpath = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+            if(!Directory.Exists(appdatalocalpath + "\\EncryptedNotes"))
+            {
+                Directory.CreateDirectory(appdatalocalpath + "\\EncryptedNotes");
+            }            
+            PublicKeyPath = $"{appdatalocalpath}\\EncryptedNotes\\publicKey.xml";
+            PrivateKeyPath = $"{appdatalocalpath}\\EncryptedNotes\\privateKey.xml";
+
+            if (!File.Exists(PublicKeyPath) || !File.Exists(PrivateKeyPath))
             {
                 var rsa = new RSACryptoServiceProvider();
                 PublicKey = rsa.ToXmlString(false);
                 PrivateKey = rsa.ToXmlString(true);
 
-                SaveKey(publicKeyPath, PublicKey);
-                SaveKey(privateKeyPath, PrivateKey);
+                SaveKey(PublicKeyPath, PublicKey);
+                SaveKey(PrivateKeyPath, PrivateKey);
             }
 
-            PublicKey = LoadKey(publicKeyPath);
-            PrivateKey = LoadKey(privateKeyPath);
+            PublicKey = LoadKey(PublicKeyPath);
+            PrivateKey = LoadKey(PrivateKeyPath);
 
             if (PublicKey == null || PrivateKey == null)
             {
                 MessageBox.Show("Error", "Failed to load or create keys", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            InitializeComponent();
         }
-
         
 
         private async void TextInput_TextChanged(object sender, TextChangedEventArgs e)
         {
-            string text = TextInput.Text;
-            if(string.IsNullOrEmpty(text) || string.IsNullOrEmpty(PublicKey))
-            {
-                return;
-            }
-            string encryptedText = await Task.Run(() => Encrypt(text, PublicKey));
-            if(encryptedText == null)
-            {
-                return;
-            }
-            File.WriteAllTextAsync("encryptedText.txt", encryptedText);
-
+            return;
         }
         static void SaveKey(string path, string key)
         {
@@ -82,7 +82,6 @@ namespace EncryptedNotes
                 var rsa = new RSACryptoServiceProvider();
                 rsa.FromXmlString(publicKey);
                 var data = Encoding.UTF8.GetBytes(text);
-                Debug.WriteLine(text);
                 var encryptedData = rsa.Encrypt(data, false);
                 return Convert.ToBase64String(encryptedData);
             }
@@ -95,23 +94,54 @@ namespace EncryptedNotes
 
         static string Decrypt(string encryptedText, string privateKey)
         {
-            var rsa = new RSACryptoServiceProvider();
-            rsa.FromXmlString(privateKey);
-            var encryptedData = Convert.FromBase64String(encryptedText);
-            var data = rsa.Decrypt(encryptedData, false);
-            return Encoding.UTF8.GetString(data);
+            try
+            {
+                var rsa = new RSACryptoServiceProvider();
+                rsa.FromXmlString(privateKey);
+                var encryptedData = Convert.FromBase64String(encryptedText);
+                var data = rsa.Decrypt(encryptedData, false);
+                return Encoding.UTF8.GetString(data);
+            }
+            catch(Exception e)
+            {
+                MessageBox.Show("Error", "Failed to decrypt text, decryption most likely failed due to incorrect keys.", MessageBoxButton.OK, MessageBoxImage.Error);
+                Debug.WriteLine(e.Message);
+                return null;
+            }
+
         }
 
         private void OpenETF_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Filter = "Encrypted Text Files (*.txt)|*.txt";
+            openFileDialog.Filter = "Encrypted Text Files (*.EncryptedTXT)|*.EncryptedTXT";
             if(openFileDialog.ShowDialog() == true)
             {
                 string encryptedText = File.ReadAllText(openFileDialog.FileName);
                 string decryptedText = Decrypt(encryptedText, PrivateKey);
                 TextInput.Text = decryptedText;
             }
+        }
+
+        private void SaveETF_Click(object sender, RoutedEventArgs e)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "Encrypted Text Files (*.EncryptedTXT)|*.EncryptedTXT";
+            if(saveFileDialog.ShowDialog() == true)
+            {
+                string encryptedText = Encrypt(TextInput.Text, PublicKey);
+                File.WriteAllText(saveFileDialog.FileName, encryptedText);
+            }
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            var rsa = new RSACryptoServiceProvider();
+            PublicKey = rsa.ToXmlString(false);
+            PrivateKey = rsa.ToXmlString(true);
+
+            SaveKey(PublicKeyPath, PublicKey);
+            SaveKey(PrivateKeyPath, PrivateKey);
         }
     }
 }
