@@ -6,6 +6,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:Ant="clr-namespace:AntWpf.Controls;assembly=AntWpf"
         mc:Ignorable="d"
+        WindowStartupLocation="CenterScreen"
         Title="Encrypted Notes" Height="450" Width="800" Background="Black">
     <Window.CommandBindings>
         <CommandBinding Command="ApplicationCommands.New" Executed="NewCommand_Executed"/>
