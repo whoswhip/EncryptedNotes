@@ -150,6 +150,8 @@ namespace EncryptedNotes
         private void OpenETF_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.DefaultDirectory = Directory.GetCurrentDirectory();
+            openFileDialog.InitialDirectory = Directory.GetCurrentDirectory();
             openFileDialog.Filter = "Encrypted Text Files (*.EncryptedTXT)|*.EncryptedTXT";
             if (openFileDialog.ShowDialog() == true)
             {
@@ -165,6 +167,8 @@ namespace EncryptedNotes
         private void SaveETF_Click(object sender, RoutedEventArgs e)
         {
             SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.DefaultDirectory = Directory.GetCurrentDirectory();
+            saveFileDialog.InitialDirectory = Directory.GetCurrentDirectory();
             saveFileDialog.Filter = "Encrypted Text Files (*.EncryptedTXT)|*.EncryptedTXT";
             if (saveFileDialog.ShowDialog() == true)
             {
@@ -196,6 +200,8 @@ namespace EncryptedNotes
         {
             TextInput.Clear();
             SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.DefaultDirectory = Directory.GetCurrentDirectory();
+            saveFileDialog.InitialDirectory = Directory.GetCurrentDirectory();
             saveFileDialog.Filter = "Encrypted Text Files (*.EncryptedTXT)|*.EncryptedTXT";
             if(saveFileDialog.ShowDialog() == true)
             {
@@ -231,7 +237,25 @@ namespace EncryptedNotes
 
         private void CloseCommand_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            this.Close();
+            if (string.IsNullOrEmpty(OpenFilePath) || string.IsNullOrEmpty(TextInput.Text))
+            {
+                return;
+            }
+            string encryptedText = Encrypt(TextInput.Text, PublicKey);
+            string currentText = File.ReadAllText(OpenFilePath);
+
+            if (encryptedText != currentText)
+            {
+                var result = MessageBox.Show("You have unsaved changes, are you sure you want to close?", "Warning", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                if (result == MessageBoxResult.No)
+                {
+                    return;
+                }
+            }
+
+            TextInput.Clear();
+            Window.Title = "Encrypted Notes";
+            OpenFilePath = string.Empty;
         }
 
     }
